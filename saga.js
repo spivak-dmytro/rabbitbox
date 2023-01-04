@@ -1,6 +1,7 @@
 import connect from "./connetion";
 import parseMessage from "./helpers/parseMessage";
 import payloadToBuffer from "./helpers/payloadToBuffer";
+import msgActionValidator from "./helpers/msgActionValidator";
 
 let channel = null;
 
@@ -111,11 +112,11 @@ export const subscribeToQueue = async (queueName, subscriber = () => null, valid
 
 const putActionBuilder = (queueName) => (action, payload) => putToQueue(queueName, { action, payload });
 
-const takeActionBuilder = (queueName) => (action, cb, validator) =>
-  takeFromQueue(queueName, cb, (msg) => msg.action === action && validator(msg));
+const takeActionBuilder = (queueName) => (action, cb, validator = () => true) =>
+  takeFromQueue(queueName, cb, (msg) => msgActionValidator(msg) && validator(msg));
 
-const subscribeActionBuilder = (queueName) => (action, cb, validator) =>
-  subscribeToQueue(queueName, cb, (msg) => msg.action === action && validator(msg));
+const subscribeActionBuilder = (queueName) => (action, cb, validator = () => true) =>
+  subscribeToQueue(queueName, cb, (msg) => msgActionValidator(msg) && validator(msg));
 
 
 export default {

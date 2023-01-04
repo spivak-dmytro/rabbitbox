@@ -3,7 +3,7 @@
  * @param msg - The message that was sent to the bot.
  * @param actionName - The name of the action to validate against.
  */
-const messageActionValidator = (msg, actionName) =>
+const msgActionValidator = (msg, actionName) =>
   typeof msg === 'object' && msg !== null && msg.action === actionName;
 
-export default messageActionValidator;
+export default msgActionValidator;

@@ -3,6 +3,7 @@
 ### Added
 
 - Action validator
+- Action based functions
 
 ### Changed
 - Exports

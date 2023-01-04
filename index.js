@@ -1,10 +1,10 @@
 import saga from './saga';
 // helpers
-import payloadToBuffer from "./helpers/payloadToBuffer";
+import msgActionValidator from "./helpers/msgActionValidator";
 
 export default {
   ...saga,
   helpers: {
-    payloadToBuffer,
+    msgActionValidator,
   }
 };

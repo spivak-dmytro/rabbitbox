@@ -109,9 +109,20 @@ export const subscribeToQueue = async (queueName, subscriber = () => null, valid
   return subscriber;
 }
 
+const putActionBuilder = (queueName) => (action, payload) => putToQueue(queueName, { action, payload });
+
+const takeActionBuilder = (queueName) => (action, cb, validator) =>
+  takeFromQueue(queueName, cb, (msg) => msg.action === action && validator(msg));
+
+const subscribeActionBuilder = (queueName) => (action, cb, validator) =>
+  subscribeToQueue(queueName, cb, (msg) => msg.action === action && validator(msg));
+
 
 export default {
   putToQueue,
   takeFromQueue,
   subscribeToQueue,
+  putActionBuilder,
+  takeActionBuilder,
+  subscribeActionBuilder,
 }

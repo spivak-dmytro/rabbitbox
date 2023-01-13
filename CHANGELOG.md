@@ -1,18 +1,9 @@
-## [1.0.1] - 2023-01-04
+## 1.0.1 (2023-01-13)
 
-### Added
 
-- Action validator
-- Action based functions
+### Features
 
-### Changed
-- Exports
+* change logic, use classes ([d8925fc](https://github.com/spivak-dmytro/rabbitbox/commit/d8925fcf7bcd8af9a5fb30f5e51f7ccd97945f74))
 
-## [1.0.0] - 2022-12-28
 
-### Added
 
-- Saga core functionality
-
-[1.0.0]: https://github.com/spivak-dmytro/rabbitbox
-[1.0.1]: https://github.com/spivak-dmytro/rabbitbox

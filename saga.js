@@ -3,127 +3,137 @@ import parseMessage from "./helpers/parseMessage";
 import payloadToBuffer from "./helpers/payloadToBuffer";
 import msgActionValidator from "./helpers/msgActionValidator";
 
-let channel = null;
+class Saga {
+  constructor(channel, currentQueue, options) {
+    const { pingPongLimit, responseTimeout } = options;
 
-/**
- * It returns a RabbitMQ channel, creating one if necessary
- * @returns A promise that resolves to a channel.
- */
-const getChannel = async () => {
-  if (!channel) {
-    const { channel: ch } = await connect();
-    channel = ch;
+    this.channel = channel;
+    this.pingPongLimit = pingPongLimit;
+    this.responseTimeout = responseTimeout;
+    this.currentQueue = currentQueue;
   }
 
-  if (!channel) {
-    throw new Error("Could not connect to RabbitMQ");
+  /**
+   * It connects to RabbitMQ and returns a Saga object
+   * @returns A Saga object
+   */
+  static async build(
+    url,
+    currentQueue,
+    {
+      connectionOptions,
+      pingPongLimit = 10,
+      responseTimeout = 1000,
+    }
+  ) {
+    const { channel } = await connect({ url, connectionOptions });
+
+    if (!channel) {
+      throw new Error("Could not connect to RabbitMQ");
+    }
+
+    return new Saga(channel, currentQueue, { pingPongLimit, responseTimeout });
   }
 
-  return channel;
-}
 
-/**
- * It gets a channel, asserts a queue, and sends a message to the queue
- * @param queueName - The name of the queue to send the message to.
- * @param payload - The data you want to send to the queue.
- * @returns A promise that resolves to undefined.
- */
-export const putToQueue = async (queueName, payload) => {
-  try {
-    await getChannel();
-  } catch (error) {
-    console.error(error);
-    return;
+
+  /**
+   * It asserts that a queue exists, and then sends a message to that queue
+   * @param queueName - The name of the queue to send the message to.
+   * @param body - The data to be sent to the queue.
+   * @returns The return value is a boolean indicating whether the message was sent to the queue.
+   */
+  async putToQueue (queueName, body) {
+    await this.channel.assertQueue(queueName, { durable: true });
+
+    return this.channel.sendToQueue(queueName, payloadToBuffer(body));
   }
 
-  channel.assertQueue(queueName, { durable: true });
-  channel.sendToQueue(queueName, payloadToBuffer(payload));
-}
+  /**
+   * It takes a queue name, a callback function, and a validator function, and returns a promise that resolves to the first
+   * message that passes the validator
+   * @param queueName - The name of the queue to take from
+   * @param [cb] - a callback function that will be called when the message is received.
+   * @param [validator] - a function that takes the payload and returns true if the message is valid.
+   * @returns A promise that resolves to the payload of the message.
+   */
+  async takeFromQueue (queueName, cb = () => null, validator = () => true) {
+    await this.channel.assertQueue(queueName, { durable: true });
 
-/**
- * It takes a queue name, a callback function, and a validator function, and returns a promise that resolves with the first
- * message in the queue that passes the validator
- * @param queueName - The name of the queue to take from
- * @param [cb] - a callback function that will be called when a message is received.
- * @param [validator] - a function that takes the payload and returns true if the message is valid.
- * @returns A promise that resolves to the payload of the message.
- */
-export const takeFromQueue = async (queueName, cb = () => null, validator = () => true) => {
-  try {
-    await getChannel();
-  } catch (error) {
-    console.error(error);
-    return;
+    return new Promise((resolve, reject) => {
+      this.channel.consume(queueName, (msg) => {
+        if (msg !== null) {
+          try {
+            const payload = parseMessage(msg);
+            if (validator(payload)) {
+              this.channel.ack(msg);
+              this.cancelSubscription(msg.fields.consumerTag).then(() => {
+                cb(payload);
+                resolve(payload);
+              });
+            }
+          } catch (error) {
+            reject(error);
+          }
+        }
+      });
+    });
   }
 
-  channel.assertQueue(queueName, { durable: true });
+  /**
+   * It subscribes to a queue, and when a message is received, it validates the message and if it's valid, it calls the
+   * subscriber function with the message payload
+   * @param queueName - The name of the queue to subscribe to.
+   * @param [subscriber] - a function that will be called when a message is received.
+   * @param [validator] - a function that takes the payload and returns true if the message is valid and should be
+   * processed.
+   * @returns A promise that resolves to a consumer tag.
+   */
+  async subscribeToQueue (queueName, subscriber = () => null, validator = () => true) {
+    await this.channel.assertQueue(queueName, { durable: true });
 
-  return new Promise((resolve, reject) => {
-    channel.consume(queueName, (msg) => {
+    return this.channel.consume(queueName, (msg) => {
       if (msg !== null) {
         try {
           const payload = parseMessage(msg);
           if (validator(payload)) {
             channel.ack(msg);
-            resolve(payload);
+            subscriber(payload, msg.fields.consumerTag);
           }
         } catch (error) {
-          reject(error);
+          console.error(error);
         }
       }
     });
-  });
-}
-
-/**
- * It subscribes to a queue, and calls a subscriber function with the message payload when a message is received
- * @param queueName - The name of the queue to subscribe to.
- * @param [subscriber] - a function that will be called when a message is received.
- * @param [validator] - a function that takes the message payload and returns true if the message is valid and should be
- * processed, or false if the message is invalid and should be discarded.
- * @returns A function that takes a payload and passes it to the subscriber function.
- */
-export const subscribeToQueue = async (queueName, subscriber = () => null, validator = () => true) => {
-  try {
-    await getChannel();
-  } catch (error) {
-    console.error(error);
-    return;
   }
 
-  channel.assertQueue(queueName, { durable: true });
+  async cancelSubscription(consumerTag) {
+    return this.channel.cancel(consumerTag);
+  }
 
-  channel.consume(queueName, (msg) => {
-    if (msg !== null) {
-      try {
-        const payload = parseMessage(msg);
-        if (validator(payload)) {
-          channel.ack(msg);
-          subscriber(payload);
-        }
-      } catch (error) {
-        console.error(error);
-      }
-    }
-  });
+  /* It's a function that takes a queue name and returns a function that takes an action and a payload and returns a
+  message. */
+  putActionBuilder = (queueName) => (action) => this.putToQueue(queueName, action);
 
-  return subscriber;
+  /* It's a function that takes a queue name and returns a function that takes an action and a payload and returns a
+  message. */
+  takeActionBuilder = (queueName) => (actionName, cb, validator = () => true) =>
+    this.takeFromQueue(queueName, cb, (msg) => msgActionValidator(msg, actionName) && validator(msg));
+
+  /* It's a function that takes a queue name and returns a function that takes an action and a payload and returns a
+  message. */
+  subscribeActionBuilder = (queueName) => (actionName, cb, validator = () => true) =>
+    this.subscribeToQueue(queueName, cb, (msg) => msgActionValidator(msg, actionName) && validator(msg));
+
+  /* It's a function that takes an action name, a callback function, and a validator function, and returns a promise
+  that resolves to the first message that passes the validator. */
+  takeFromCurrentQueue = (actionName, cb, validator = () => true) =>
+    this.takeActionBuilder(this.currentQueue)(actionName, cb, validator);
+
+  /* It's a function that takes an action name, a callback function, and a validator function, and returns a promise
+    that resolves to the first message that passes the validator. */
+  subscribeToCurrentQueue = (actionName, cb, validator = () => true) =>
+    this.subscribeActionBuilder(this.currentQueue)(actionName, cb, validator);
 }
 
-const putActionBuilder = (queueName) => (action, payload) => putToQueue(queueName, { action, payload });
-
-const takeActionBuilder = (queueName) => (action, cb, validator = () => true) =>
-  takeFromQueue(queueName, cb, (msg) => msgActionValidator(msg) && validator(msg));
-
-const subscribeActionBuilder = (queueName) => (action, cb, validator = () => true) =>
-  subscribeToQueue(queueName, cb, (msg) => msgActionValidator(msg) && validator(msg));
-
-
-export default {
-  putToQueue,
-  takeFromQueue,
-  subscribeToQueue,
-  putActionBuilder,
-  takeActionBuilder,
-  subscribeActionBuilder,
-}
+export default Saga;

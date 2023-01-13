@@ -4,9 +4,9 @@ import amqp from "amqplib";
  * It connects to RabbitMQ and creates a channel
  * @returns An object with two properties: connection and channel.
  */
-const connect = async () => {
+const connect = async ({ url, connectionOptions }) => {
   try {
-    const connection = await amqp.connect(`amqp://${process.env.RABBITMQ_HOST}`);
+    const connection = await amqp.connect(url, connectionOptions);
     const channel = await connection.createChannel();
     return { connection, channel };
   } catch (error) {

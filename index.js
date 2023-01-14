@@ -1,9 +1,11 @@
-import saga from './saga';
+import Saga from './saga';
+import Action from "./action";
 // helpers
 import msgActionValidator from "./helpers/msgActionValidator";
 
 export default {
-  ...saga,
+  Saga,
+  Action,
   helpers: {
     msgActionValidator,
   }

@@ -1,12 +1,8 @@
-import Saga from './saga';
-import Action from "./action";
+export Saga from './saga';
+export Action from "./action";
 // helpers
 import msgActionValidator from "./helpers/msgActionValidator";
 
-export default {
-  Saga,
-  Action,
-  helpers: {
-    msgActionValidator,
-  }
+export const helpers = {
+  msgActionValidator,
 };

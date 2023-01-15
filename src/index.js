@@ -7,7 +7,7 @@ export const helpers = {
   msgActionValidator,
 };
 
-export {
+export default {
   Saga,
   Action,
 }

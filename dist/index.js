@@ -1,11 +1,13 @@
 "use strict";
 
-var Saga = require('./saga');
-var Action = require('./action');
+var _saga = _interopRequireDefault(require("./saga"));
+var _action = _interopRequireDefault(require("./action"));
+var _msgActionValidator = _interopRequireDefault(require("./helpers/msgActionValidator"));
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
 // helpers
-var msgActionValidator = require('./helpers/msgActionValidator');
+
 module.exports = {
-  Saga: Saga,
-  Action: Action,
-  msgActionValidator: msgActionValidator
+  Saga: _saga["default"],
+  Action: _action["default"],
+  msgActionValidator: _msgActionValidator["default"]
 };

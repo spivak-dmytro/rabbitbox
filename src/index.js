@@ -1,7 +1,7 @@
-const Saga = require('./saga');
-const Action = require('./action');
+import Saga from './saga';
+import Action from "./action";
 // helpers
-const msgActionValidator = require('./helpers/msgActionValidator');
+import msgActionValidator from "./helpers/msgActionValidator";
 
 module.exports = {
   Saga,

@@ -1,5 +1,5 @@
-import Saga from './saga';
-import Action from "./action";
+const Saga = require('./saga');
+const Action = require('./action');
 // helpers
 import msgActionValidator from "./helpers/msgActionValidator";
 

@@ -3,8 +3,8 @@ import Action from "./action";
 // helpers
 import msgActionValidator from "./helpers/msgActionValidator";
 
-export const helpers = {
-  msgActionValidator,
+module.exports = {
   Saga,
   Action,
-};
+  msgActionValidator,
+}

@@ -1,8 +1,10 @@
-export { default as Saga } from './saga';
-export { default as Action } from "./action";
+import Saga from './saga';
+import Action from "./action";
 // helpers
 import msgActionValidator from "./helpers/msgActionValidator";
 
 export const helpers = {
   msgActionValidator,
+  Saga,
+  Action,
 };

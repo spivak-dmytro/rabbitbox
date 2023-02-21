@@ -1,0 +1,15 @@
+# https://github.com/actions/labeler
+changelog-unchanged:
+  - all: ['!CHANGELOG.md']
+
+git-actions-changed:
+  - any: ['.github/*', '.github/**/*']
+
+tests-unchanged:
+  - all: ['!**/tests.py', '!**/**/tests.py']
+
+pip-dependencies-changed:
+  - any: ['Pipfile', 'Pipfile.lock']
+
+api-changed:
+  - any: ['api/*', 'api/**/*']
